@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestión de Servicios de Streaming</title>
+    <link rel="stylesheet" href="assets/css/style.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <!-- Sidebar -->
+        <nav class="sidebar">
+            <div class="sidebar-header">
+                <h2><i class="fas fa-tv"></i> StreamingApp</h2>
+            </div>
+            <ul class="sidebar-menu">
+                <li><a href="#" onclick="showSection('dashboard')" class="active"><i class="fas fa-home"></i> Dashboard</a></li>
+                <li><a href="#" onclick="showSection('clientes')"><i class="fas fa-users"></i> Clientes</a></li>
+                <li><a href="#" onclick="showSection('proveedores')"><i class="fas fa-building"></i> Proveedores</a></li>
+                <li><a href="#" onclick="showSection('servicios')"><i class="fas fa-play-circle"></i> Servicios</a></li>
+                <li><a href="#" onclick="showSection('notificaciones')"><i class="fas fa-bell"></i> Notificaciones</a></li>
+            </ul>
+        </nav>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Dashboard Section -->
+            <section id="dashboard" class="content-section active">
+                <div class="section-header">
+                    <h1>Dashboard</h1>
+                    <p>Resumen de tu gestión de servicios de streaming</p>
+                </div>
+                
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-icon">
+                            <i class="fas fa-users"></i>
+                        </div>
+                        <div class="stat-content">
+                            <h3 id="total-clientes">0</h3>
+                            <p>Clientes Activos</p>
+                        </div>
+                    </div>
+                    
+                    <div class="stat-card">
+                        <div class="stat-icon">
+                            <i class="fas fa-play-circle"></i>
+                        </div>
+                        <div class="stat-content">
+                            <h3 id="total-servicios">0</h3>
+                            <p>Servicios Activos</p>
+                        </div>
+                    </div>
+                    
+                    <div class="stat-card">
+                        <div class="stat-icon">
+                            <i class="fas fa-exclamation-triangle"></i>
+                        </div>
+                        <div class="stat-content">
+                            <h3 id="servicios-vencer">0</h3>
+                            <p>Próximos a Vencer</p>
+                        </div>
+                    </div>
+                    
+                    <div class="stat-card">
+                        <div class="stat-icon">
+                            <i class="fas fa-dollar-sign"></i>
+                        </div>
+                        <div class="stat-content">
+                            <h3 id="ingresos-mensuales">$0</h3>
+                            <p>Ingresos Mensuales</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="dashboard-content">
+                    <div class="card">
+                        <div class="card-header">
+                            <h3>Servicios Próximos a Vencer</h3>
+                            <button class="btn btn-primary" onclick="generarNotificaciones()">
+                                <i class="fas fa-bell"></i> Generar Notificaciones
+                            </button>
+                        </div>
+                        <div class="card-body">
+                            <div id="servicios-vencer-list">
+                                <p>Cargando...</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Clientes Section -->
+            <section id="clientes" class="content-section">
+                <div class="section-header">
+                    <h1>Gestión de Clientes</h1>
+                    <button class="btn btn-primary" onclick="openClienteModal()">
+                        <i class="fas fa-plus"></i> Nuevo Cliente
+                    </button>
+                </div>
+                
+                <div class="card">
+                    <div class="card-body">
+                        <div class="table-container">
+                            <table id="clientes-table" class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th onclick="sortTable('clientes', 'nombre')" class="sortable">
+                                            Nombre <i class="fas fa-sort"></i>
+                                        </th>
+                                        <th onclick="sortTable('clientes', 'apellido')" class="sortable">
+                                            Apellido <i class="fas fa-sort"></i>
+                                        </th>
+                                        <th onclick="sortTable('clientes', 'telefono')" class="sortable">
+                                            Teléfono <i class="fas fa-sort"></i>
+                                        </th>
+                                        <th onclick="sortTable('clientes', 'email')" class="sortable">
+                                            Email <i class="fas fa-sort"></i>
+                                        </th>
+                                        <th onclick="sortTable('clientes', 'activo')" class="sortable">
+                                            Estado <i class="fas fa-sort"></i>
+                                        </th>
+                                        <th>Acciones</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td colspan="7">Cargando...</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Proveedores Section -->
+            <section id="proveedores" class="content-section">
+                <div class="section-header">
+                    <h1>Gestión de Proveedores</h1>
+                    <button class="btn btn-primary" onclick="openProveedorModal()">
+                        <i class="fas fa-plus"></i> Nuevo Proveedor
+                    </button>
+                </div>
+                
+                <div class="card">
+                    <div class="card-body">
+                        <div class="table-container">
+                            <table id="proveedores-table" class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th onclick="sortTable('proveedores', 'nombre')" class="sortable">
+                                            Nombre <i class="fas fa-sort"></i>
+                                        </th>
+                                        <th onclick="sortTable('proveedores', 'contacto')" class="sortable">
+                                            Contacto <i class="fas fa-sort"></i>
+                                        </th>
+                                        <th onclick="sortTable('proveedores', 'telefono')" class="sortable">
+                                            Teléfono <i class="fas fa-sort"></i>
+                                        </th>
+                                        <th onclick="sortTable('proveedores', 'email')" class="sortable">
+                                            Email <i class="fas fa-sort"></i>
+                                        </th>
+                                        <th>Acciones</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td colspan="6">Cargando...</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Servicios Section -->
+            <section id="servicios" class="content-section">
+                <div class="section-header">
+                    <h1>Gestión de Servicios</h1>
+                    <button class="btn btn-primary" onclick="openServicioModal()">
+                        <i class="fas fa-plus"></i> Nuevo Servicio
+                    </button>
+                </div>
+                
+                <div class="card">
+                    <div class="card-body">
+                        <div class="table-container">
+                            <table id="servicios-table" class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th onclick="sortTable('servicios', 'cliente_nombre')" class="sortable">
+                                            Cliente <i class="fas fa-sort"></i>
+                                        </th>
+                                        <th onclick="sortTable('servicios', 'nombre_servicio')" class="sortable">
+                                            Servicio <i class="fas fa-sort"></i>
+                                        </th>
+                                        <th onclick="sortTable('servicios', 'tipo_servicio')" class="sortable">
+                                            Tipo <i class="fas fa-sort"></i>
+                                        </th>
+                                        <th onclick="sortTable('servicios', 'precio_mensual')" class="sortable">
+                                            Precio <i class="fas fa-sort"></i>
+                                        </th>
+                                        <th onclick="sortTable('servicios', 'fecha_vencimiento')" class="sortable">
+                                            Vencimiento <i class="fas fa-sort"></i>
+                                        </th>
+                                        <th onclick="sortTable('servicios', 'estado')" class="sortable">
+                                            Estado <i class="fas fa-sort"></i>
+                                        </th>
+                                        <th>Acciones</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td colspan="8">Cargando...</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Notificaciones Section -->
+            <section id="notificaciones" class="content-section">
+                <div class="section-header">
+                    <h1>Gestión de Notificaciones</h1>
+                    <div class="header-actions">
+                        <button class="btn btn-success" onclick="enviarNotificacionesPendientes()">
+                            <i class="fas fa-paper-plane"></i> Enviar Pendientes
+                        </button>
+                        <button class="btn btn-primary" onclick="generarNotificaciones()">
+                            <i class="fas fa-bell"></i> Generar Automáticas
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="card">
+                    <div class="card-body">
+                        <div class="table-container">
+                            <table id="notificaciones-table" class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th onclick="sortTable('notificaciones', 'id')" class="sortable">
+                                            ID <i class="fas fa-sort"></i>
+                                        </th>
+                                        <th onclick="sortTable('notificaciones', 'cliente_nombre')" class="sortable">
+                                            Cliente <i class="fas fa-sort"></i>
+                                        </th>
+                                        <th onclick="sortTable('notificaciones', 'nombre_servicio')" class="sortable">
+                                            Servicio <i class="fas fa-sort"></i>
+                                        </th>
+                                        <th onclick="sortTable('notificaciones', 'tipo_notificacion')" class="sortable">
+                                            Tipo <i class="fas fa-sort"></i>
+                                        </th>
+                                        <th onclick="sortTable('notificaciones', 'mensaje')" class="sortable">
+                                            Mensaje <i class="fas fa-sort"></i>
+                                        </th>
+                                        <th onclick="sortTable('notificaciones', 'estado')" class="sortable">
+                                            Estado <i class="fas fa-sort"></i>
+                                        </th>
+                                        <th onclick="sortTable('notificaciones', 'fecha_envio')" class="sortable">
+                                            Fecha Envío <i class="fas fa-sort"></i>
+                                        </th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td colspan="7">Cargando...</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Modals -->
+    <div id="clienteModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="clienteModalTitle">Nuevo Cliente</h2>
+                <span class="close" onclick="closeModal('clienteModal')">&times;</span>
+            </div>
+            <div class="modal-body">
+                <form id="clienteForm">
+                    <input type="hidden" id="clienteId">
+                    <div class="form-group">
+                        <label for="clienteNombre">Nombre *</label>
+                        <input type="text" id="clienteNombre" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="clienteApellido">Apellido *</label>
+                        <input type="text" id="clienteApellido" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="clienteTelefono">Teléfono *</label>
+                        <input type="tel" id="clienteTelefono" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="clienteEmail">Email</label>
+                        <input type="email" id="clienteEmail">
+                    </div>
+                    <div class="form-group">
+                        <label for="clienteDireccion">Dirección</label>
+                        <textarea id="clienteDireccion" rows="3"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="clienteStatus">Estado</label>
+                        <select id="clienteStatus">
+                            <option value="1">Activo</option>
+                            <option value="0">Inactivo</option>
+                        </select>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeModal('clienteModal')">Cancelar</button>
+                <button type="button" class="btn btn-primary" onclick="saveCliente()">Guardar</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="proveedorModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="proveedorModalTitle">Nuevo Proveedor</h2>
+                <span class="close" onclick="closeModal('proveedorModal')">&times;</span>
+            </div>
+            <div class="modal-body">
+                <form id="proveedorForm">
+                    <input type="hidden" id="proveedorId">
+                    <div class="form-group">
+                        <label for="proveedorNombre">Nombre *</label>
+                        <input type="text" id="proveedorNombre" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="proveedorContacto">Contacto</label>
+                        <input type="text" id="proveedorContacto">
+                    </div>
+                    <div class="form-group">
+                        <label for="proveedorTelefono">Teléfono</label>
+                        <input type="tel" id="proveedorTelefono">
+                    </div>
+                    <div class="form-group">
+                        <label for="proveedorEmail">Email</label>
+                        <input type="email" id="proveedorEmail">
+                    </div>
+                    <div class="form-group">
+                        <label for="proveedorDireccion">Dirección</label>
+                        <textarea id="proveedorDireccion" rows="3"></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeModal('proveedorModal')">Cancelar</button>
+                <button type="button" class="btn btn-primary" onclick="saveProveedor()">Guardar</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="servicioModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="servicioModalTitle">Nuevo Servicio</h2>
+                <span class="close" onclick="closeModal('servicioModal')">&times;</span>
+            </div>
+            <div class="modal-body">
+                <form id="servicioForm">
+                    <input type="hidden" id="servicioId">
+                    <div class="form-group">
+                        <label for="servicioCliente">Cliente *</label>
+                        <select id="servicioCliente" required>
+                            <option value="">Seleccionar cliente...</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="servicioProveedor">Proveedor *</label>
+                        <select id="servicioProveedor" required>
+                            <option value="">Seleccionar proveedor...</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="servicioNombre">Nombre del Servicio *</label>
+                        <input type="text" id="servicioNombre" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="servicioTipo">Tipo de Servicio *</label>
+                        <select id="servicioTipo" required>
+                            <option value="">Seleccionar tipo...</option>
+                            <option value="Netflix">Netflix</option>
+                            <option value="Disney+">Disney+</option>
+                            <option value="Amazon Prime">Amazon Prime</option>
+                            <option value="HBO Max">HBO Max</option>
+                            <option value="Spotify">Spotify</option>
+                            <option value="Apple Music">Apple Music</option>
+                            <option value="YouTube Premium">YouTube Premium</option>
+                            <option value="Capcut Pro">Capcut Pro</option>
+                            <option value="Canva EDU">Canva EDU</option>
+                            <option value="Otro">Otro</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="servicioPrecio">Precio Mensual *</label>
+                        <input type="number" id="servicioPrecio" step="0.01" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="servicioInicio">Fecha de Inicio *</label>
+                        <input type="date" id="servicioInicio" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="servicioVencimiento">Fecha de Vencimiento *</label>
+                        <input type="date" id="servicioVencimiento" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="servicioEstado">Estado</label>
+                        <select id="servicioEstado">
+                            <option value="Activo">Activo</option>
+                            <option value="Suspendido">Suspendido</option>
+                            <option value="Cancelado">Cancelado</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="servicioObservaciones">Observaciones</label>
+                        <textarea id="servicioObservaciones" rows="3"></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeModal('servicioModal')">Cancelar</button>
+                <button type="button" class="btn btn-primary" onclick="saveServicio()">Guardar</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="assets/js/app.js"></script>
+</body>
+</html>
