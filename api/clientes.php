@@ -9,6 +9,18 @@ if ($_SERVER['REQUEST_METHOD'] == 'OPTIONS') {
 }
 
 require_once '../config/database.php';
+require_once '../config/session.php';
+
+// Verificar autenticación de usuario
+SessionManager::init();
+if (!SessionManager::isLoggedIn()) {
+    http_response_code(401);
+    echo json_encode([
+        'success' => false,
+        'message' => 'No autenticado'
+    ]);
+    exit;
+}
 
 class ClienteAPI {
     private $conn;
@@ -19,17 +31,56 @@ class ClienteAPI {
         $this->conn = $database->getConnection();
     }
 
-    // Obtener todos los clientes
-    public function getAll() {
+    // Obtener todos los clientes con búsqueda y paginación
+    public function getAll($params = []) {
         try {
-            $query = "SELECT * FROM " . $this->table_name . " ORDER BY fecha_registro DESC";
+            // Parámetros de paginación y búsqueda
+            $page = max(1, isset($params['page']) ? (int)$params['page'] : 1);
+            $perPage = max(1, min(1000, isset($params['per_page']) ? (int)$params['per_page'] : 10));
+            $search = isset($params['search']) ? trim($params['search']) : '';
+            $activo = isset($params['activo']) && $params['activo'] !== '' ? (int)$params['activo'] : null;
+
+            $conditions = [];
+            $bindings = [];
+            if ($search !== '') {
+                $conditions[] = "(nombre LIKE :q OR apellido LIKE :q OR telefono LIKE :q OR email LIKE :q)";
+                $bindings[':q'] = "%" . $search . "%";
+            }
+            if ($activo !== null) {
+                $conditions[] = "activo = :activo";
+                $bindings[':activo'] = $activo;
+            }
+            $where = count($conditions) ? (' WHERE ' . implode(' AND ', $conditions)) : '';
+
+            // Contar total
+            $countQuery = "SELECT COUNT(*) AS total FROM " . $this->table_name . $where;
+            $countStmt = $this->conn->prepare($countQuery);
+            foreach ($bindings as $k => $v) {
+                $countStmt->bindValue($k, $v);
+            }
+            $countStmt->execute();
+            $total = (int)$countStmt->fetch()['total'];
+
+            // Calcular límite/offset
+            $offset = ($page - 1) * $perPage;
+
+            // Obtener datos paginados
+            $query = "SELECT * FROM " . $this->table_name . $where . " ORDER BY fecha_registro DESC LIMIT :limit OFFSET :offset";
             $stmt = $this->conn->prepare($query);
+            foreach ($bindings as $k => $v) {
+                $stmt->bindValue($k, $v);
+            }
+            $stmt->bindValue(':limit', (int)$perPage, PDO::PARAM_INT);
+            $stmt->bindValue(':offset', (int)$offset, PDO::PARAM_INT);
             $stmt->execute();
             $clientes = $stmt->fetchAll();
             
             return array(
                 'success' => true,
-                'data' => $clientes
+                'data' => $clientes,
+                'total' => $total,
+                'page' => $page,
+                'per_page' => $perPage
             );
         } catch (Exception $e) {
             return array(
@@ -203,7 +254,13 @@ switch ($method) {
         if (isset($_GET['id'])) {
             $result = $clienteAPI->getById($_GET['id']);
         } else {
-            $result = $clienteAPI->getAll();
+            // Soporte de paginación y búsqueda
+            $params = [
+                'page' => $_GET['page'] ?? 1,
+                'per_page' => $_GET['per_page'] ?? 10,
+                'search' => $_GET['search'] ?? ''
+            ];
+            $result = $clienteAPI->getAll($params);
         }
         break;
         

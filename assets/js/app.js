@@ -8,6 +8,11 @@ let proveedores = [];
 let servicios = [];
 let notificaciones = [];
 
+// Estados de paginación/búsqueda
+const clientesState = { page: 1, perPage: 10, search: '', total: 0, activo: null };
+const proveedoresState = { page: 1, perPage: 10, search: '', total: 0 };
+const serviciosState = { page: 1, perPage: 10, search: '', total: 0 };
+
 // Variables para ordenamiento
 let sortConfig = {
     clientes: { field: null, direction: 'asc' },
@@ -17,11 +22,24 @@ let sortConfig = {
 };
 
 // Inicialización de la aplicación
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', async function() {
+    // Si existe verificación de autenticación (definida en auth.js), esperar a que esté autenticado
+    if (typeof window.checkAuthStatus === 'function') {
+        const isAuth = await window.checkAuthStatus();
+        if (!isAuth) {
+            // Redirección ocurrirá en checkAuthStatus
+            return;
+        }
+    }
+
     loadDashboard();
     loadClientes();
     loadProveedores();
     loadServicios();
+    // Listeners de búsqueda con debounce
+    setupSearchInputs();
+    // Listeners de controles de tabla (page size y solo activos)
+    setupTableControls();
     loadNotificaciones();
 });
 
@@ -70,8 +88,8 @@ async function loadDashboard() {
     try {
         // Cargar estadísticas
         const [clientesRes, serviciosRes, serviciosVencerRes] = await Promise.all([
-            fetch(API_BASE + 'clientes.php'),
-            fetch(API_BASE + 'servicios.php'),
+            fetch(API_BASE + 'clientes.php?per_page=1000'),
+            fetch(API_BASE + 'servicios.php?per_page=1000'),
             fetch(API_BASE + 'servicios.php?proximos_vencer=1&dias=7')
         ]);
         
@@ -135,12 +153,21 @@ function displayServiciosVencer(servicios) {
 // Funciones para Clientes
 async function loadClientes() {
     try {
-        const response = await fetch(API_BASE + 'clientes.php');
+        const params = {
+            page: clientesState.page,
+            per_page: clientesState.perPage,
+            search: clientesState.search
+        };
+        if (clientesState.activo === 1) params.activo = 1;
+        const qs = new URLSearchParams(params).toString();
+        const response = await fetch(API_BASE + 'clientes.php?' + qs);
         const data = await response.json();
         
         if (data.success) {
             clientes = data.data;
+            clientesState.total = data.total ?? clientes.length;
             sortAndDisplayClientes();
+            renderPagination('clientes-pagination', clientesState, changeClientesPage);
         } else {
             showNotification('Error cargando clientes: ' + data.message, 'error');
         }
@@ -291,12 +318,19 @@ async function deleteCliente(id) {
 // Funciones para Proveedores
 async function loadProveedores() {
     try {
-        const response = await fetch(API_BASE + 'proveedores.php');
+        const qs = new URLSearchParams({
+            page: proveedoresState.page,
+            per_page: proveedoresState.perPage,
+            search: proveedoresState.search
+        }).toString();
+        const response = await fetch(API_BASE + 'proveedores.php?' + qs);
         const data = await response.json();
         
         if (data.success) {
             proveedores = data.data;
+            proveedoresState.total = data.total ?? proveedores.length;
             sortAndDisplayProveedores();
+            renderPagination('proveedores-pagination', proveedoresState, changeProveedoresPage);
         } else {
             showNotification('Error cargando proveedores: ' + data.message, 'error');
         }
@@ -436,12 +470,19 @@ async function deleteProveedor(id) {
 // Funciones para Servicios
 async function loadServicios() {
     try {
-        const response = await fetch(API_BASE + 'servicios.php');
+        const qs = new URLSearchParams({
+            page: serviciosState.page,
+            per_page: serviciosState.perPage,
+            search: serviciosState.search
+        }).toString();
+        const response = await fetch(API_BASE + 'servicios.php?' + qs);
         const data = await response.json();
         
         if (data.success) {
             servicios = data.data;
+            serviciosState.total = data.total ?? servicios.length;
             sortAndDisplayServicios();
+            renderPagination('servicios-pagination', serviciosState, changeServiciosPage);
         } else {
             showNotification('Error cargando servicios: ' + data.message, 'error');
         }
@@ -511,16 +552,35 @@ function openServicioModal(servicio = null) {
     modal.style.display = 'block';
 }
 
-function loadClienteOptions() {
+async function loadClienteOptions() {
     const select = document.getElementById('servicioCliente');
+    // Si hay más clientes en total que los cargados, traer todos
+    if (clientesState.total > clientes.length) {
+        try {
+            const res = await fetch(API_BASE + 'clientes.php?per_page=1000');
+            const data = await res.json();
+            if (data.success) {
+                clientes = data.data;
+            }
+        } catch (e) { /* ignore and fallback to current list */ }
+    }
     const options = clientes.map(cliente => 
         `<option value="${cliente.id}">${cliente.nombre} ${cliente.apellido}</option>`
     ).join('');
     select.innerHTML = '<option value="">Seleccionar cliente...</option>' + options;
 }
 
-function loadProveedorOptions() {
+async function loadProveedorOptions() {
     const select = document.getElementById('servicioProveedor');
+    if (proveedoresState.total > proveedores.length) {
+        try {
+            const res = await fetch(API_BASE + 'proveedores.php?per_page=1000');
+            const data = await res.json();
+            if (data.success) {
+                proveedores = data.data;
+            }
+        } catch (e) { /* ignore */ }
+    }
     const options = proveedores.map(proveedor => 
         `<option value="${proveedor.id}">${proveedor.nombre}</option>`
     ).join('');
@@ -915,6 +975,112 @@ function sortAndDisplayServicios() {
     }
     
     displayServicios(sortedServicios);
+}
+
+// Helper: paginación y búsqueda
+function renderPagination(containerId, state, onPageChange) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+    const totalPages = Math.max(1, Math.ceil((state.total || 0) / state.perPage));
+    const page = Math.min(state.page, totalPages);
+
+    // Construir botones
+    let html = '';
+    const makeBtn = (label, targetPage, disabled = false, active = false) => {
+        const cls = `page-btn ${disabled ? 'disabled' : ''} ${active ? 'active' : ''}`;
+        return `<button class="${cls}" ${disabled ? 'disabled' : ''} data-page="${targetPage}">${label}</button>`;
+    };
+
+    html += makeBtn('«', 1, page === 1);
+    html += makeBtn('‹', page - 1, page === 1);
+
+    const range = getPageRange(page, totalPages);
+    range.forEach(p => {
+        if (p === '...') {
+            html += `<span class="page-ellipsis">...</span>`;
+        } else {
+            html += makeBtn(p, p, false, p === page);
+        }
+    });
+
+    html += makeBtn('›', page + 1, page === totalPages);
+    html += makeBtn('»', totalPages, page === totalPages);
+
+    container.innerHTML = html;
+    // Listeners
+    container.querySelectorAll('button.page-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const target = parseInt(btn.getAttribute('data-page'));
+            if (!isNaN(target)) onPageChange(target);
+        });
+    });
+}
+
+function getPageRange(current, total) {
+    const pages = [];
+    const delta = 2;
+    const left = Math.max(1, current - delta);
+    const right = Math.min(total, current + delta);
+    for (let i = left; i <= right; i++) pages.push(i);
+    if (left > 2) pages.unshift('...');
+    if (left > 1) pages.unshift(1);
+    if (right < total - 1) pages.push('...');
+    if (right < total) pages.push(total);
+    return pages;
+}
+
+function changeClientesPage(p) { clientesState.page = p; loadClientes(); }
+function changeProveedoresPage(p) { proveedoresState.page = p; loadProveedores(); }
+function changeServiciosPage(p) { serviciosState.page = p; loadServicios(); }
+
+function setupSearchInputs() {
+    const c = document.getElementById('clientes-search');
+    if (c) c.addEventListener('input', debounce(() => { clientesState.search = c.value.trim(); clientesState.page = 1; loadClientes(); }, 350));
+    const p = document.getElementById('proveedores-search');
+    if (p) p.addEventListener('input', debounce(() => { proveedoresState.search = p.value.trim(); proveedoresState.page = 1; loadProveedores(); }, 350));
+    const s = document.getElementById('servicios-search');
+    if (s) s.addEventListener('input', debounce(() => { serviciosState.search = s.value.trim(); serviciosState.page = 1; loadServicios(); }, 350));
+}
+
+function debounce(fn, wait) {
+    let t;
+    return function(...args) {
+        clearTimeout(t);
+        t = setTimeout(() => fn.apply(this, args), wait);
+    }
+}
+
+function setupTableControls() {
+    // Clientes: page size
+    const cSize = document.getElementById('clientes-page-size');
+    if (cSize) cSize.addEventListener('change', () => {
+        clientesState.perPage = parseInt(cSize.value, 10) || 10;
+        clientesState.page = 1;
+        loadClientes();
+    });
+    // Clientes: solo activos
+    const cOnlyActive = document.getElementById('clientes-only-active');
+    if (cOnlyActive) cOnlyActive.addEventListener('change', () => {
+        clientesState.activo = cOnlyActive.checked ? 1 : null;
+        clientesState.page = 1;
+        loadClientes();
+    });
+
+    // Proveedores: page size
+    const pSize = document.getElementById('proveedores-page-size');
+    if (pSize) pSize.addEventListener('change', () => {
+        proveedoresState.perPage = parseInt(pSize.value, 10) || 10;
+        proveedoresState.page = 1;
+        loadProveedores();
+    });
+
+    // Servicios: page size
+    const sSize = document.getElementById('servicios-page-size');
+    if (sSize) sSize.addEventListener('change', () => {
+        serviciosState.perPage = parseInt(sSize.value, 10) || 10;
+        serviciosState.page = 1;
+        loadServicios();
+    });
 }
 
 function sortAndDisplayNotificaciones() {

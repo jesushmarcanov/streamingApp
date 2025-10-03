@@ -9,6 +9,18 @@ if ($_SERVER['REQUEST_METHOD'] == 'OPTIONS') {
 }
 
 require_once '../config/database.php';
+require_once '../config/session.php';
+
+// Verificar autenticación de usuario
+SessionManager::init();
+if (!SessionManager::isLoggedIn()) {
+    http_response_code(401);
+    echo json_encode([
+        'success' => false,
+        'message' => 'No autenticado'
+    ]);
+    exit;
+}
 
 class ProveedorAPI {
     private $conn;
@@ -19,17 +31,48 @@ class ProveedorAPI {
         $this->conn = $database->getConnection();
     }
 
-    // Obtener todos los proveedores
-    public function getAll() {
+    // Obtener todos los proveedores con búsqueda y paginación
+    public function getAll($params = []) {
         try {
-            $query = "SELECT * FROM " . $this->table_name . " WHERE activo = 1 ORDER BY fecha_registro DESC";
+            $page = max(1, isset($params['page']) ? (int)$params['page'] : 1);
+            $perPage = max(1, min(1000, isset($params['per_page']) ? (int)$params['per_page'] : 10));
+            $search = isset($params['search']) ? trim($params['search']) : '';
+
+            $where = " WHERE activo = 1";
+            $bindings = [];
+            if ($search !== '') {
+                $where .= " AND (nombre LIKE :q OR contacto LIKE :q OR telefono LIKE :q OR email LIKE :q)";
+                $bindings[':q'] = "%" . $search . "%";
+            }
+
+            // Conteo total
+            $countQuery = "SELECT COUNT(*) AS total FROM " . $this->table_name . $where;
+            $countStmt = $this->conn->prepare($countQuery);
+            foreach ($bindings as $k => $v) {
+                $countStmt->bindValue($k, $v);
+            }
+            $countStmt->execute();
+            $total = (int)$countStmt->fetch()['total'];
+
+            $offset = ($page - 1) * $perPage;
+
+            // Obtener página
+            $query = "SELECT * FROM " . $this->table_name . $where . " ORDER BY fecha_registro DESC LIMIT :limit OFFSET :offset";
             $stmt = $this->conn->prepare($query);
+            foreach ($bindings as $k => $v) {
+                $stmt->bindValue($k, $v);
+            }
+            $stmt->bindValue(':limit', (int)$perPage, PDO::PARAM_INT);
+            $stmt->bindValue(':offset', (int)$offset, PDO::PARAM_INT);
             $stmt->execute();
             $proveedores = $stmt->fetchAll();
             
             return array(
                 'success' => true,
-                'data' => $proveedores
+                'data' => $proveedores,
+                'total' => $total,
+                'page' => $page,
+                'per_page' => $perPage
             );
         } catch (Exception $e) {
             return array(
@@ -203,7 +246,12 @@ switch ($method) {
         if (isset($_GET['id'])) {
             $result = $proveedorAPI->getById($_GET['id']);
         } else {
-            $result = $proveedorAPI->getAll();
+            $params = [
+                'page' => $_GET['page'] ?? 1,
+                'per_page' => $_GET['per_page'] ?? 10,
+                'search' => $_GET['search'] ?? ''
+            ];
+            $result = $proveedorAPI->getAll($params);
         }
         break;
         

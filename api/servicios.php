@@ -9,6 +9,18 @@ if ($_SERVER['REQUEST_METHOD'] == 'OPTIONS') {
 }
 
 require_once '../config/database.php';
+require_once '../config/session.php';
+
+// Verificar autenticación de usuario
+SessionManager::init();
+if (!SessionManager::isLoggedIn()) {
+    http_response_code(401);
+    echo json_encode([
+        'success' => false,
+        'message' => 'No autenticado'
+    ]);
+    exit;
+}
 
 class ServicioAPI {
     private $conn;
@@ -19,22 +31,57 @@ class ServicioAPI {
         $this->conn = $database->getConnection();
     }
 
-    // Obtener todos los servicios con información de cliente y proveedor
-    public function getAll() {
+    // Obtener todos los servicios con información de cliente y proveedor (con búsqueda y paginación)
+    public function getAll($params = []) {
         try {
+            $page = max(1, isset($params['page']) ? (int)$params['page'] : 1);
+            $perPage = max(1, min(1000, isset($params['per_page']) ? (int)$params['per_page'] : 10));
+            $search = isset($params['search']) ? trim($params['search']) : '';
+
+            $where = '';
+            $bindings = [];
+            if ($search !== '') {
+                $where = " WHERE (c.nombre LIKE :q OR c.apellido LIKE :q OR p.nombre LIKE :q OR s.nombre_servicio LIKE :q OR s.tipo_servicio LIKE :q OR s.estado LIKE :q)";
+                $bindings[':q'] = "%" . $search . "%";
+            }
+
+            // Conteo total
+            $countQuery = "SELECT COUNT(*) AS total
+                           FROM " . $this->table_name . " s
+                           LEFT JOIN clientes c ON s.cliente_id = c.id
+                           LEFT JOIN proveedores p ON s.proveedor_id = p.id" . $where;
+            $countStmt = $this->conn->prepare($countQuery);
+            foreach ($bindings as $k => $v) {
+                $countStmt->bindValue($k, $v);
+            }
+            $countStmt->execute();
+            $total = (int)$countStmt->fetch()['total'];
+
+            $offset = ($page - 1) * $perPage;
+
+            // Datos paginados
             $query = "SELECT s.*, c.nombre as cliente_nombre, c.apellido as cliente_apellido, 
                              c.telefono as cliente_telefono, p.nombre as proveedor_nombre
                       FROM " . $this->table_name . " s
                       LEFT JOIN clientes c ON s.cliente_id = c.id
-                      LEFT JOIN proveedores p ON s.proveedor_id = p.id
-                      ORDER BY s.fecha_registro DESC";
+                      LEFT JOIN proveedores p ON s.proveedor_id = p.id" . $where . "
+                      ORDER BY s.fecha_registro DESC
+                      LIMIT :limit OFFSET :offset";
             $stmt = $this->conn->prepare($query);
+            foreach ($bindings as $k => $v) {
+                $stmt->bindValue($k, $v);
+            }
+            $stmt->bindValue(':limit', (int)$perPage, PDO::PARAM_INT);
+            $stmt->bindValue(':offset', (int)$offset, PDO::PARAM_INT);
             $stmt->execute();
             $servicios = $stmt->fetchAll();
             
             return array(
                 'success' => true,
-                'data' => $servicios
+                'data' => $servicios,
+                'total' => $total,
+                'page' => $page,
+                'per_page' => $perPage
             );
         } catch (Exception $e) {
             return array(
@@ -227,7 +274,12 @@ switch ($method) {
             $dias = $_GET['dias'] ?? 7;
             $result = $servicioAPI->getProximosVencer($dias);
         } else {
-            $result = $servicioAPI->getAll();
+            $params = [
+                'page' => $_GET['page'] ?? 1,
+                'per_page' => $_GET['per_page'] ?? 10,
+                'search' => $_GET['search'] ?? ''
+            ];
+            $result = $servicioAPI->getAll($params);
         }
         break;
         
