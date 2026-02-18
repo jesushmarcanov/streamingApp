@@ -17,7 +17,34 @@ let sortConfig = {
 };
 
 // Inicialización de la aplicación
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', async function () {
+    // Verificar sesión antes de cargar la app
+    try {
+        const res = await fetch(API_BASE + 'auth.php?action=check');
+        const data = await res.json();
+
+        if (!data.authenticated) {
+            window.location.href = 'login.html';
+            return;
+        }
+
+        // Mostrar info del usuario en el sidebar
+        const user = data.user;
+        const nameEl = document.getElementById('sidebarUserName');
+        const roleEl = document.getElementById('sidebarUserRole');
+        if (nameEl) nameEl.textContent = user.nombre;
+        if (roleEl) {
+            roleEl.textContent = user.rol === 'admin' ? 'Admin' : 'Usuario';
+            roleEl.className = 'sidebar-user-role' + (user.rol === 'admin' ? '' : ' role-usuario');
+        }
+
+    } catch (err) {
+        console.error('Error verificando sesión:', err);
+        window.location.href = 'login.html';
+        return;
+    }
+
+    // Cargar datos de la aplicación
     loadDashboard();
     loadClientes();
     loadProveedores();
@@ -25,28 +52,37 @@ document.addEventListener('DOMContentLoaded', function() {
     loadNotificaciones();
 });
 
+// Cerrar sesión
+async function logout() {
+    try {
+        await fetch(API_BASE + 'auth.php?action=logout', { method: 'POST' });
+    } catch (e) { /* ignorar errores de red */ }
+    window.location.href = 'login.html';
+}
+
+
 // Navegación entre secciones
 function showSection(sectionName) {
     // Ocultar todas las secciones
     document.querySelectorAll('.content-section').forEach(section => {
         section.classList.remove('active');
     });
-    
+
     // Remover clase active de todos los enlaces del menú
     document.querySelectorAll('.sidebar-menu a').forEach(link => {
         link.classList.remove('active');
     });
-    
+
     // Mostrar la sección seleccionada
     document.getElementById(sectionName).classList.add('active');
-    
+
     // Agregar clase active al enlace correspondiente
     event.target.classList.add('active');
-    
+
     currentSection = sectionName;
-    
+
     // Cargar datos específicos de la sección
-    switch(sectionName) {
+    switch (sectionName) {
         case 'dashboard':
             loadDashboard();
             break;
@@ -74,32 +110,32 @@ async function loadDashboard() {
             fetch(API_BASE + 'servicios.php'),
             fetch(API_BASE + 'servicios.php?proximos_vencer=1&dias=7')
         ]);
-        
+
         const clientesData = await clientesRes.json();
         const serviciosData = await serviciosRes.json();
         const serviciosVencerData = await serviciosVencerRes.json();
-        
+
         if (clientesData.success) {
             const clientesActivos = clientesData.data.filter(c => c.activo == 1);
             document.getElementById('total-clientes').textContent = clientesActivos.length;
         }
-        
+
         if (serviciosData.success) {
             const serviciosActivos = serviciosData.data.filter(s => s.estado === 'Activo');
             document.getElementById('total-servicios').textContent = serviciosActivos.length;
-            
+
             // Calcular ingresos mensuales
             const ingresos = serviciosActivos.reduce((total, servicio) => {
                 return total + parseFloat(servicio.precio_mensual || 0);
             }, 0);
             document.getElementById('ingresos-mensuales').textContent = '$' + ingresos.toFixed(2);
         }
-        
+
         if (serviciosVencerData.success) {
             document.getElementById('servicios-vencer').textContent = serviciosVencerData.data.length;
             displayServiciosVencer(serviciosVencerData.data);
         }
-        
+
     } catch (error) {
         console.error('Error cargando dashboard:', error);
         showNotification('Error cargando el dashboard', 'error');
@@ -108,12 +144,12 @@ async function loadDashboard() {
 
 function displayServiciosVencer(servicios) {
     const container = document.getElementById('servicios-vencer-list');
-    
+
     if (servicios.length === 0) {
         container.innerHTML = '<p>No hay servicios próximos a vencer</p>';
         return;
     }
-    
+
     const html = servicios.map(servicio => `
         <div class="servicio-item" style="padding: 15px; border: 1px solid #e9ecef; border-radius: 5px; margin-bottom: 10px;">
             <div style="display: flex; justify-content: space-between; align-items: center;">
@@ -128,7 +164,7 @@ function displayServiciosVencer(servicios) {
             </div>
         </div>
     `).join('');
-    
+
     container.innerHTML = html;
 }
 
@@ -137,7 +173,7 @@ async function loadClientes() {
     try {
         const response = await fetch(API_BASE + 'clientes.php');
         const data = await response.json();
-        
+
         if (data.success) {
             clientes = data.data;
             sortAndDisplayClientes();
@@ -152,12 +188,12 @@ async function loadClientes() {
 
 function displayClientes(clientes) {
     const tbody = document.querySelector('#clientes-table tbody');
-    
+
     if (clientes.length === 0) {
         tbody.innerHTML = '<tr><td colspan="7">No hay clientes registrados</td></tr>';
         return;
     }
-    
+
     const html = clientes.map(cliente => `
         <tr>
             <td>${cliente.nombre}</td>
@@ -180,7 +216,7 @@ function displayClientes(clientes) {
             </td>
         </tr>
     `).join('');
-    
+
     tbody.innerHTML = html;
 }
 
@@ -188,9 +224,9 @@ function openClienteModal(cliente = null) {
     const modal = document.getElementById('clienteModal');
     const title = document.getElementById('clienteModalTitle');
     const form = document.getElementById('clienteForm');
-    
+
     form.reset();
-    
+
     if (cliente) {
         title.textContent = 'Editar Cliente';
         document.getElementById('clienteId').value = cliente.id;
@@ -204,7 +240,7 @@ function openClienteModal(cliente = null) {
         title.textContent = 'Nuevo Cliente';
         document.getElementById('clienteStatus').value = '1'; // Default to active for new clients
     }
-    
+
     modal.style.display = 'block';
 }
 
@@ -217,7 +253,7 @@ function editCliente(id) {
 
 async function saveCliente() {
     const form = document.getElementById('clienteForm');
-    
+
     // Obtener datos del formulario manualmente para incluir campos vacíos
     const data = {
         nombre: document.getElementById('clienteNombre').value.trim(),
@@ -227,17 +263,17 @@ async function saveCliente() {
         direccion: document.getElementById('clienteDireccion').value.trim(),
         activo: parseInt(document.getElementById('clienteStatus').value)
     };
-    
+
     // Validar campos requeridos
     if (!data.nombre || !data.apellido || !data.telefono) {
         showNotification('Por favor completa todos los campos requeridos', 'error');
         return;
     }
-    
+
     const id = document.getElementById('clienteId').value;
     const method = id ? 'PUT' : 'POST';
     const url = id ? `${API_BASE}clientes.php?id=${id}` : `${API_BASE}clientes.php`;
-    
+
     try {
         const response = await fetch(url, {
             method: method,
@@ -246,9 +282,9 @@ async function saveCliente() {
             },
             body: JSON.stringify(data)
         });
-        
+
         const result = await response.json();
-        
+
         if (result.success) {
             showNotification(result.message, 'success');
             closeModal('clienteModal');
@@ -267,14 +303,14 @@ async function deleteCliente(id) {
     if (!confirm('¿Estás seguro de que quieres eliminar este cliente?')) {
         return;
     }
-    
+
     try {
         const response = await fetch(`${API_BASE}clientes.php?id=${id}`, {
             method: 'DELETE'
         });
-        
+
         const result = await response.json();
-        
+
         if (result.success) {
             showNotification(result.message, 'success');
             loadClientes();
@@ -293,7 +329,7 @@ async function loadProveedores() {
     try {
         const response = await fetch(API_BASE + 'proveedores.php');
         const data = await response.json();
-        
+
         if (data.success) {
             proveedores = data.data;
             sortAndDisplayProveedores();
@@ -308,12 +344,12 @@ async function loadProveedores() {
 
 function displayProveedores(proveedores) {
     const tbody = document.querySelector('#proveedores-table tbody');
-    
+
     if (proveedores.length === 0) {
         tbody.innerHTML = '<tr><td colspan="6">No hay proveedores registrados</td></tr>';
         return;
     }
-    
+
     const html = proveedores.map(proveedor => `
         <tr>
             <td>${proveedor.nombre}</td>
@@ -330,7 +366,7 @@ function displayProveedores(proveedores) {
             </td>
         </tr>
     `).join('');
-    
+
     tbody.innerHTML = html;
 }
 
@@ -338,9 +374,9 @@ function openProveedorModal(proveedor = null) {
     const modal = document.getElementById('proveedorModal');
     const title = document.getElementById('proveedorModalTitle');
     const form = document.getElementById('proveedorForm');
-    
+
     form.reset();
-    
+
     if (proveedor) {
         title.textContent = 'Editar Proveedor';
         document.getElementById('proveedorId').value = proveedor.id;
@@ -352,7 +388,7 @@ function openProveedorModal(proveedor = null) {
     } else {
         title.textContent = 'Nuevo Proveedor';
     }
-    
+
     modal.style.display = 'block';
 }
 
@@ -365,7 +401,7 @@ function editProveedor(id) {
 
 async function saveProveedor() {
     const form = document.getElementById('proveedorForm');
-    
+
     // Obtener datos del formulario manualmente para incluir campos vacíos
     const data = {
         nombre: document.getElementById('proveedorNombre').value.trim(),
@@ -374,17 +410,17 @@ async function saveProveedor() {
         email: document.getElementById('proveedorEmail').value.trim(),
         direccion: document.getElementById('proveedorDireccion').value.trim()
     };
-    
+
     // Validar campos requeridos
     if (!data.nombre) {
         showNotification('El nombre del proveedor es requerido', 'error');
         return;
     }
-    
+
     const id = document.getElementById('proveedorId').value;
     const method = id ? 'PUT' : 'POST';
     const url = id ? `${API_BASE}proveedores.php?id=${id}` : `${API_BASE}proveedores.php`;
-    
+
     try {
         const response = await fetch(url, {
             method: method,
@@ -393,9 +429,9 @@ async function saveProveedor() {
             },
             body: JSON.stringify(data)
         });
-        
+
         const result = await response.json();
-        
+
         if (result.success) {
             showNotification(result.message, 'success');
             closeModal('proveedorModal');
@@ -413,14 +449,14 @@ async function deleteProveedor(id) {
     if (!confirm('¿Estás seguro de que quieres eliminar este proveedor?')) {
         return;
     }
-    
+
     try {
         const response = await fetch(`${API_BASE}proveedores.php?id=${id}`, {
             method: 'DELETE'
         });
-        
+
         const result = await response.json();
-        
+
         if (result.success) {
             showNotification(result.message, 'success');
             loadProveedores();
@@ -438,7 +474,7 @@ async function loadServicios() {
     try {
         const response = await fetch(API_BASE + 'servicios.php');
         const data = await response.json();
-        
+
         if (data.success) {
             servicios = data.data;
             sortAndDisplayServicios();
@@ -453,12 +489,12 @@ async function loadServicios() {
 
 function displayServicios(servicios) {
     const tbody = document.querySelector('#servicios-table tbody');
-    
+
     if (servicios.length === 0) {
         tbody.innerHTML = '<tr><td colspan="8">No hay servicios registrados</td></tr>';
         return;
     }
-    
+
     const html = servicios.map(servicio => `
         <tr>
             <td>${servicio.cliente_nombre} ${servicio.cliente_apellido}</td>
@@ -477,7 +513,7 @@ function displayServicios(servicios) {
             </td>
         </tr>
     `).join('');
-    
+
     tbody.innerHTML = html;
 }
 
@@ -485,13 +521,13 @@ function openServicioModal(servicio = null) {
     const modal = document.getElementById('servicioModal');
     const title = document.getElementById('servicioModalTitle');
     const form = document.getElementById('servicioForm');
-    
+
     form.reset();
-    
+
     // Cargar opciones de clientes y proveedores
     loadClienteOptions();
     loadProveedorOptions();
-    
+
     if (servicio) {
         title.textContent = 'Editar Servicio';
         document.getElementById('servicioId').value = servicio.id;
@@ -507,13 +543,13 @@ function openServicioModal(servicio = null) {
     } else {
         title.textContent = 'Nuevo Servicio';
     }
-    
+
     modal.style.display = 'block';
 }
 
 function loadClienteOptions() {
     const select = document.getElementById('servicioCliente');
-    const options = clientes.map(cliente => 
+    const options = clientes.map(cliente =>
         `<option value="${cliente.id}">${cliente.nombre} ${cliente.apellido}</option>`
     ).join('');
     select.innerHTML = '<option value="">Seleccionar cliente...</option>' + options;
@@ -521,7 +557,7 @@ function loadClienteOptions() {
 
 function loadProveedorOptions() {
     const select = document.getElementById('servicioProveedor');
-    const options = proveedores.map(proveedor => 
+    const options = proveedores.map(proveedor =>
         `<option value="${proveedor.id}">${proveedor.nombre}</option>`
     ).join('');
     select.innerHTML = '<option value="">Seleccionar proveedor...</option>' + options;
@@ -536,7 +572,7 @@ function editServicio(id) {
 
 async function saveServicio() {
     const form = document.getElementById('servicioForm');
-    
+
     // Obtener datos del formulario manualmente para incluir campos vacíos
     const data = {
         cliente_id: document.getElementById('servicioCliente').value,
@@ -549,22 +585,22 @@ async function saveServicio() {
         estado: document.getElementById('servicioEstado').value,
         observaciones: document.getElementById('servicioObservaciones').value.trim()
     };
-    
+
     // Validar campos requeridos
-    if (!data.cliente_id || !data.proveedor_id || !data.nombre_servicio || 
-        !data.tipo_servicio || !data.precio_mensual || !data.fecha_inicio || 
+    if (!data.cliente_id || !data.proveedor_id || !data.nombre_servicio ||
+        !data.tipo_servicio || !data.precio_mensual || !data.fecha_inicio ||
         !data.fecha_vencimiento) {
         showNotification('Por favor completa todos los campos requeridos', 'error');
         return;
     }
-    
+
     // Convertir precio a número
     data.precio_mensual = parseFloat(data.precio_mensual);
-    
+
     const id = document.getElementById('servicioId').value;
     const method = id ? 'PUT' : 'POST';
     const url = id ? `${API_BASE}servicios.php?id=${id}` : `${API_BASE}servicios.php`;
-    
+
     try {
         const response = await fetch(url, {
             method: method,
@@ -573,9 +609,9 @@ async function saveServicio() {
             },
             body: JSON.stringify(data)
         });
-        
+
         const result = await response.json();
-        
+
         if (result.success) {
             showNotification(result.message, 'success');
             closeModal('servicioModal');
@@ -594,14 +630,14 @@ async function deleteServicio(id) {
     if (!confirm('¿Estás seguro de que quieres eliminar este servicio?')) {
         return;
     }
-    
+
     try {
         const response = await fetch(`${API_BASE}servicios.php?id=${id}`, {
             method: 'DELETE'
         });
-        
+
         const result = await response.json();
-        
+
         if (result.success) {
             showNotification(result.message, 'success');
             loadServicios();
@@ -620,7 +656,7 @@ async function loadNotificaciones() {
     try {
         const response = await fetch(API_BASE + 'notificaciones.php?historial=1');
         const data = await response.json();
-        
+
         if (data.success) {
             notificaciones = data.data;
             sortAndDisplayNotificaciones();
@@ -635,12 +671,12 @@ async function loadNotificaciones() {
 
 function displayNotificaciones(notificaciones) {
     const tbody = document.querySelector('#notificaciones-table tbody');
-    
+
     if (notificaciones.length === 0) {
         tbody.innerHTML = '<tr><td colspan="7">No hay notificaciones registradas</td></tr>';
         return;
     }
-    
+
     const html = notificaciones.map(notificacion => `
         <tr>
             <td>${notificacion.id}</td>
@@ -652,7 +688,7 @@ function displayNotificaciones(notificaciones) {
             <td>${notificacion.fecha_envio ? formatDateTime(notificacion.fecha_envio) : '-'}</td>
         </tr>
     `).join('');
-    
+
     tbody.innerHTML = html;
 }
 
@@ -661,9 +697,9 @@ async function generarNotificaciones() {
         const response = await fetch(API_BASE + 'notificaciones.php?action=generar_automaticas', {
             method: 'POST'
         });
-        
+
         const result = await response.json();
-        
+
         if (result.success) {
             showNotification(result.message, 'success');
             loadNotificaciones();
@@ -682,9 +718,9 @@ async function enviarNotificacionesPendientes() {
         const response = await fetch(API_BASE + 'notificaciones.php?action=enviar_pendientes', {
             method: 'POST'
         });
-        
+
         const result = await response.json();
-        
+
         if (result.success) {
             showNotification(result.message, 'success');
             loadNotificaciones();
@@ -728,9 +764,9 @@ function showNotification(message, type = 'info') {
         animation: slideInRight 0.3s ease;
         max-width: 300px;
     `;
-    
+
     // Estilos según el tipo
-    switch(type) {
+    switch (type) {
         case 'success':
             notification.style.backgroundColor = '#28a745';
             break;
@@ -744,10 +780,10 @@ function showNotification(message, type = 'info') {
         default:
             notification.style.backgroundColor = '#17a2b8';
     }
-    
+
     notification.textContent = message;
     document.body.appendChild(notification);
-    
+
     // Remover después de 5 segundos
     setTimeout(() => {
         notification.style.animation = 'slideOutRight 0.3s ease';
@@ -758,7 +794,7 @@ function showNotification(message, type = 'info') {
 }
 
 // Cerrar modales al hacer clic fuera de ellos
-window.onclick = function(event) {
+window.onclick = function (event) {
     const modals = document.querySelectorAll('.modal');
     modals.forEach(modal => {
         if (event.target === modal) {
@@ -770,7 +806,7 @@ window.onclick = function(event) {
 // Funciones de ordenamiento
 function sortTable(tableType, field) {
     const currentSort = sortConfig[tableType];
-    
+
     // Determinar la dirección del ordenamiento
     if (currentSort.field === field) {
         currentSort.direction = currentSort.direction === 'asc' ? 'desc' : 'asc';
@@ -778,12 +814,12 @@ function sortTable(tableType, field) {
         currentSort.field = field;
         currentSort.direction = 'asc';
     }
-    
+
     // Actualizar iconos de ordenamiento
     updateSortIcons(tableType, field, currentSort.direction);
-    
+
     // Ordenar y mostrar datos
-    switch(tableType) {
+    switch (tableType) {
         case 'clientes':
             sortAndDisplayClientes();
             break;
@@ -802,11 +838,11 @@ function sortTable(tableType, field) {
 function updateSortIcons(tableType, activeField, direction) {
     const table = document.getElementById(`${tableType}-table`);
     const headers = table.querySelectorAll('th.sortable');
-    
+
     headers.forEach(header => {
         const icon = header.querySelector('i');
         const field = header.getAttribute('onclick').match(/sortTable\('[\w]+', '([^']+)'\)/)[1];
-        
+
         if (field === activeField) {
             icon.className = direction === 'asc' ? 'fas fa-sort-up' : 'fas fa-sort-down';
         } else {
@@ -818,24 +854,24 @@ function updateSortIcons(tableType, activeField, direction) {
 function sortAndDisplayClientes() {
     const sortedClientes = [...clientes];
     const { field, direction } = sortConfig.clientes;
-    
+
     if (field) {
         sortedClientes.sort((a, b) => {
             let aVal = a[field] || '';
             let bVal = b[field] || '';
-            
+
             // Para valores numéricos
             if (field === 'id' || field === 'telefono') {
                 aVal = parseInt(aVal) || 0;
                 bVal = parseInt(bVal) || 0;
             }
-            
+
             // Para fechas
             if (field.includes('fecha')) {
                 aVal = new Date(aVal);
                 bVal = new Date(bVal);
             }
-            
+
             if (direction === 'asc') {
                 return aVal > bVal ? 1 : aVal < bVal ? -1 : 0;
             } else {
@@ -843,31 +879,31 @@ function sortAndDisplayClientes() {
             }
         });
     }
-    
+
     displayClientes(sortedClientes);
 }
 
 function sortAndDisplayProveedores() {
     const sortedProveedores = [...proveedores];
     const { field, direction } = sortConfig.proveedores;
-    
+
     if (field) {
         sortedProveedores.sort((a, b) => {
             let aVal = a[field] || '';
             let bVal = b[field] || '';
-            
+
             // Para valores numéricos
             if (field === 'id' || field === 'telefono') {
                 aVal = parseInt(aVal) || 0;
                 bVal = parseInt(bVal) || 0;
             }
-            
+
             // Para fechas
             if (field.includes('fecha')) {
                 aVal = new Date(aVal);
                 bVal = new Date(bVal);
             }
-            
+
             if (direction === 'asc') {
                 return aVal > bVal ? 1 : aVal < bVal ? -1 : 0;
             } else {
@@ -875,20 +911,20 @@ function sortAndDisplayProveedores() {
             }
         });
     }
-    
+
     displayProveedores(sortedProveedores);
 }
 
 function sortAndDisplayServicios() {
     const sortedServicios = [...servicios];
     const { field, direction } = sortConfig.servicios;
-    
+
     if (field) {
         sortedServicios.sort((a, b) => {
             let aVal, bVal;
-            
+
             // Mapear campos específicos para servicios
-            switch(field) {
+            switch (field) {
                 case 'cliente_nombre':
                     aVal = `${a.cliente_nombre} ${a.cliente_apellido}`;
                     bVal = `${b.cliente_nombre} ${b.cliente_apellido}`;
@@ -905,7 +941,7 @@ function sortAndDisplayServicios() {
                     aVal = a[field] || '';
                     bVal = b[field] || '';
             }
-            
+
             if (direction === 'asc') {
                 return aVal > bVal ? 1 : aVal < bVal ? -1 : 0;
             } else {
@@ -913,31 +949,31 @@ function sortAndDisplayServicios() {
             }
         });
     }
-    
+
     displayServicios(sortedServicios);
 }
 
 function sortAndDisplayNotificaciones() {
     const sortedNotificaciones = [...notificaciones];
     const { field, direction } = sortConfig.notificaciones;
-    
+
     if (field) {
         sortedNotificaciones.sort((a, b) => {
             let aVal = a[field] || '';
             let bVal = b[field] || '';
-            
+
             // Para valores numéricos
             if (field === 'id') {
                 aVal = parseInt(aVal) || 0;
                 bVal = parseInt(bVal) || 0;
             }
-            
+
             // Para fechas
             if (field.includes('fecha')) {
                 aVal = new Date(aVal);
                 bVal = new Date(bVal);
             }
-            
+
             if (direction === 'asc') {
                 return aVal > bVal ? 1 : aVal < bVal ? -1 : 0;
             } else {
@@ -945,7 +981,7 @@ function sortAndDisplayNotificaciones() {
             }
         });
     }
-    
+
     displayNotificaciones(sortedNotificaciones);
 }
 

@@ -5,8 +5,8 @@
 class Database {
     private $host = 'localhost';
     private $db_name = 'streaming_services';
-    private $username = 'root';
-    private $password = 'root';
+    private $username = 'local_user';
+    private $password = '123456';
     private $conn;
 
     /**

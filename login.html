@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Iniciar Sesión - StreamingApp</title>
+    <meta name="description" content="Accede a tu panel de gestión de servicios de streaming">
+    <link rel="stylesheet" href="assets/css/auth.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+
+    <!-- Partículas de fondo -->
+    <div class="particles"></div>
+
+    <div class="auth-wrapper">
+        <div class="auth-card">
+
+            <!-- Marca -->
+            <div class="auth-brand">
+                <div class="brand-icon">
+                    <i class="fas fa-tv"></i>
+                </div>
+                <h1>StreamingApp</h1>
+                <p>Gestión de servicios de streaming</p>
+            </div>
+
+            <!-- Tabs -->
+            <div class="auth-tabs" role="tablist">
+                <button class="tab-btn active" data-tab="loginPanel" role="tab" aria-selected="true" id="tab-login">
+                    <i class="fas fa-sign-in-alt"></i> Iniciar Sesión
+                </button>
+                <button class="tab-btn" data-tab="registerPanel" role="tab" aria-selected="false" id="tab-register">
+                    <i class="fas fa-user-plus"></i> Registrarse
+                </button>
+            </div>
+
+            <!-- ── Panel Login ── -->
+            <div class="tab-panel active" id="loginPanel" role="tabpanel" aria-labelledby="tab-login">
+
+                <div class="auth-alert" id="loginAlert" role="alert">
+                    <i class="fas fa-exclamation-circle"></i>
+                    <span class="alert-msg"></span>
+                </div>
+
+                <form id="loginForm" novalidate>
+                    <div class="form-group">
+                        <label for="loginUsername">Usuario o Email</label>
+                        <div class="input-wrapper">
+                            <input
+                                type="text"
+                                id="loginUsername"
+                                name="username"
+                                placeholder="Ingresa tu usuario o email"
+                                autocomplete="username"
+                                required
+                            >
+                            <i class="fas fa-user input-icon"></i>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="loginPassword">Contraseña</label>
+                        <div class="input-wrapper">
+                            <input
+                                type="password"
+                                id="loginPassword"
+                                name="password"
+                                placeholder="Ingresa tu contraseña"
+                                autocomplete="current-password"
+                                class="has-toggle"
+                                required
+                            >
+                            <button type="button" class="toggle-password" aria-label="Mostrar contraseña">
+                                <i class="fas fa-eye-slash"></i>
+                            </button>
+                            <i class="fas fa-lock input-icon"></i>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn-auth" id="loginBtn">
+                        <div class="spinner"></div>
+                        <span class="btn-text">
+                            <i class="fas fa-sign-in-alt"></i> Ingresar
+                        </span>
+                    </button>
+                </form>
+            </div>
+
+            <!-- ── Panel Registro ── -->
+            <div class="tab-panel" id="registerPanel" role="tabpanel" aria-labelledby="tab-register">
+
+                <div class="auth-alert" id="registerAlert" role="alert">
+                    <i class="fas fa-exclamation-circle"></i>
+                    <span class="alert-msg"></span>
+                </div>
+
+                <form id="registerForm" novalidate>
+                    <div class="form-group">
+                        <label for="regNombre">Nombre completo</label>
+                        <div class="input-wrapper">
+                            <input
+                                type="text"
+                                id="regNombre"
+                                name="nombre"
+                                placeholder="Tu nombre completo"
+                                autocomplete="name"
+                                required
+                            >
+                            <i class="fas fa-id-card input-icon"></i>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="regUsername">Nombre de usuario</label>
+                        <div class="input-wrapper">
+                            <input
+                                type="text"
+                                id="regUsername"
+                                name="username"
+                                placeholder="Elige un nombre de usuario"
+                                autocomplete="username"
+                                required
+                            >
+                            <i class="fas fa-user input-icon"></i>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="regEmail">Email</label>
+                        <div class="input-wrapper">
+                            <input
+                                type="email"
+                                id="regEmail"
+                                name="email"
+                                placeholder="tu@email.com"
+                                autocomplete="email"
+                                required
+                            >
+                            <i class="fas fa-envelope input-icon"></i>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="regPassword">Contraseña</label>
+                        <div class="input-wrapper">
+                            <input
+                                type="password"
+                                id="regPassword"
+                                name="password"
+                                placeholder="Mínimo 6 caracteres"
+                                autocomplete="new-password"
+                                class="has-toggle"
+                                required
+                            >
+                            <button type="button" class="toggle-password" aria-label="Mostrar contraseña">
+                                <i class="fas fa-eye-slash"></i>
+                            </button>
+                            <i class="fas fa-lock input-icon"></i>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="regConfirm">Confirmar contraseña</label>
+                        <div class="input-wrapper">
+                            <input
+                                type="password"
+                                id="regConfirm"
+                                name="confirm"
+                                placeholder="Repite tu contraseña"
+                                autocomplete="new-password"
+                                class="has-toggle"
+                                required
+                            >
+                            <button type="button" class="toggle-password" aria-label="Mostrar contraseña">
+                                <i class="fas fa-eye-slash"></i>
+                            </button>
+                            <i class="fas fa-lock input-icon"></i>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn-auth" id="registerBtn">
+                        <div class="spinner"></div>
+                        <span class="btn-text">
+                            <i class="fas fa-user-plus"></i> Crear Cuenta
+                        </span>
+                    </button>
+                </form>
+            </div>
+
+            <!-- Footer -->
+            <div class="auth-footer">
+                <p>StreamingApp &copy; 2026 &mdash; Gestión de servicios</p>
+            </div>
+
+        </div>
+    </div>
+
+    <script src="assets/js/auth.js"></script>
+</body>
+</html>

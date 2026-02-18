@@ -21,6 +21,20 @@
                 <li><a href="#" onclick="showSection('servicios')"><i class="fas fa-play-circle"></i> Servicios</a></li>
                 <li><a href="#" onclick="showSection('notificaciones')"><i class="fas fa-bell"></i> Notificaciones</a></li>
             </ul>
+
+            <!-- User Info Panel -->
+            <div class="sidebar-user" id="sidebarUser">
+                <div class="sidebar-user-avatar">
+                    <i class="fas fa-user-circle"></i>
+                </div>
+                <div class="sidebar-user-info">
+                    <span class="sidebar-user-name" id="sidebarUserName">Cargando...</span>
+                    <span class="sidebar-user-role" id="sidebarUserRole">—</span>
+                </div>
+                <button class="sidebar-logout-btn" onclick="logout()" title="Cerrar sesión">
+                    <i class="fas fa-sign-out-alt"></i>
+                </button>
+            </div>
         </nav>
 
         <!-- Main Content -->
