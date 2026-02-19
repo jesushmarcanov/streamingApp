@@ -2,16 +2,24 @@
 CREATE DATABASE IF NOT EXISTS streaming_services;
 USE streaming_services;
 
--- Tabla de proveedores de servicios
-CREATE TABLE proveedores (
+-- Tabla de usuarios para autenticación
+CREATE TABLE usuarios (
     id INT AUTO_INCREMENT PRIMARY KEY,
+    username VARCHAR(50) UNIQUE NOT NULL,
+    email VARCHAR(100) UNIQUE NOT NULL,
+    password_hash VARCHAR(255) NOT NULL,
     nombre VARCHAR(100) NOT NULL,
-    contacto VARCHAR(100),
+    apellido VARCHAR(100) NOT NULL,
     telefono VARCHAR(20),
-    email VARCHAR(100),
-    direccion TEXT,
+    rol ENUM('admin', 'usuario') DEFAULT 'usuario',
+    activo BOOLEAN DEFAULT TRUE,
+    email_verified BOOLEAN DEFAULT FALSE,
+    email_verification_token VARCHAR(64) NULL,
+    password_reset_token VARCHAR(64) NULL,
+    password_reset_expires DATETIME NULL,
+    ultimo_acceso TIMESTAMP NULL,
     fecha_registro TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    activo BOOLEAN DEFAULT TRUE
+    fecha_actualizacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
 
 -- Tabla de clientes
@@ -72,6 +80,10 @@ INSERT INTO configuracion (clave, valor, descripcion) VALUES
 ('whatsapp_token', '', 'Token de acceso para WhatsApp'),
 ('dias_aviso_vencimiento', '7', 'Días de anticipación para avisar vencimientos'),
 ('mensaje_vencimiento', 'Hola {nombre}, tu servicio {servicio} vence el {fecha}. Por favor renueva tu suscripción.', 'Mensaje template para vencimientos');
+
+-- Insertar usuario administrador por defecto (password: admin123)
+INSERT INTO usuarios (username, email, password_hash, nombre, apellido, rol, email_verified) VALUES
+('admin', 'admin@streamingapp.com', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'Administrador', 'Sistema', 'admin', 1);
 
 -- Insertar algunos proveedores de ejemplo
 INSERT INTO proveedores (nombre, contacto, telefono, email) VALUES
