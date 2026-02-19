@@ -9,6 +9,18 @@ if ($_SERVER['REQUEST_METHOD'] == 'OPTIONS') {
 }
 
 require_once '../config/database.php';
+require_once '../config/session.php';
+
+// Verificar autenticación de usuario
+SessionManager::init();
+if (!SessionManager::isLoggedIn()) {
+    http_response_code(401);
+    echo json_encode([
+        'success' => false,
+        'message' => 'No autenticado'
+    ]);
+    exit;
+}
 
 class NotificacionAPI {
     private $conn;
