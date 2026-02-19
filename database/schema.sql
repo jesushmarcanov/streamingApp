@@ -92,3 +92,20 @@ INSERT INTO proveedores (nombre, contacto, telefono, email) VALUES
 ('Amazon Prime Video', 'Customer Service', '+1-888-280-4331', 'prime-video-support@amazon.com'),
 ('HBO Max', 'Soporte', '+1-855-442-6629', 'support@hbomax.com'),
 ('Spotify', 'Atención al Usuario', '+1-877-778-3687', 'support@spotify.com');
+
+-- Tabla de usuarios del sistema
+CREATE TABLE IF NOT EXISTS usuarios (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    nombre VARCHAR(100) NOT NULL,
+    username VARCHAR(50) UNIQUE NOT NULL,
+    email VARCHAR(100) UNIQUE NOT NULL,
+    password VARCHAR(255) NOT NULL,
+    rol ENUM('admin', 'usuario') DEFAULT 'usuario',
+    activo BOOLEAN DEFAULT TRUE,
+    fecha_registro TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    ultimo_acceso TIMESTAMP NULL
+);
+
+-- Usuario administrador por defecto (contraseña: admin123)
+INSERT INTO usuarios (nombre, username, email, password, rol) VALUES
+('Administrador', 'admin', 'admin@streamingapp.com', '$2y$10$zwYzxbK3tbZcPpaVhD8q6eH7W5uCq.pI/LhVbKkA6QSpFtIyO/Y2W', 'admin');
