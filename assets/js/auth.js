@@ -548,6 +548,175 @@ async function logout() {
     }
 }
 
+/**
+ * Cerrar modal (reutilizar función de app.js si existe, sino definir la nuestra)
+ */
+function closeModal(modalId) {
+    const modal = document.getElementById(modalId);
+    if (modal) {
+        modal.style.display = 'none';
+    }
+}
+
+/**
+ * Cargar datos del usuario en el dashboard
+ */
+async function loadUserData() {
+    try {
+        const response = await fetch(`${API_BASE_URL}?action=profile`);
+        const data = await response.json();
+        
+        if (data.success && data.data) {
+            // Actualizar sidebar con datos del usuario
+            const userNameElement = document.getElementById('sidebarUserName');
+            const userRoleElement = document.getElementById('sidebarUserRole');
+            
+            if (userNameElement) {
+                const fullName = `${data.data.nombre} ${data.data.apellido}`.trim();
+                userNameElement.textContent = fullName || data.data.username;
+            }
+            
+            if (userRoleElement) {
+                userRoleElement.textContent = data.data.rol || 'Usuario';
+            }
+            
+            // Guardar datos en variables globales para uso posterior
+            window.currentUser = data.data;
+        }
+    } catch (error) {
+        console.error('Error cargando datos del usuario:', error);
+    }
+}
+
+/**
+ * Abrir modal de perfil
+ */
+async function openProfileModal() {
+    try {
+        const response = await fetch(`${API_BASE_URL}?action=profile`);
+        const data = await response.json();
+        
+        if (data.success && data.data) {
+            const modal = document.getElementById('profileModal');
+            const form = document.getElementById('profileForm');
+            
+            // Cargar datos del formulario
+            document.getElementById('perfilNombre').value = data.data.nombre || '';
+            document.getElementById('perfilApellido').value = data.data.apellido || '';
+            document.getElementById('perfilTelefono').value = data.data.telefono || '';
+            document.getElementById('perfilEmail').value = data.data.email || '';
+            
+            // Mostrar estado de verificación de email
+            const emailEstado = document.getElementById('perfilEmailEstado');
+            if (emailEstado && data.data.email_verified) {
+                emailEstado.textContent = '✓ Verificado';
+                emailEstado.style.color = '#28a745';
+            } else if (emailEstado) {
+                emailEstado.textContent = 'No verificado';
+                emailEstado.style.color = '#dc3545';
+            }
+            
+            modal.style.display = 'block';
+        } else {
+            showNotification('Error cargando perfil', 'error');
+        }
+    } catch (error) {
+        console.error('Error cargando perfil:', error);
+        showNotification('Error cargando perfil', 'error');
+    }
+}
+
+/**
+ * Guardar perfil del usuario
+ */
+async function saveProfile() {
+    const data = {
+        nombre: document.getElementById('perfilNombre').value.trim(),
+        apellido: document.getElementById('perfilApellido').value.trim(),
+        telefono: document.getElementById('perfilTelefono').value.trim()
+    };
+    
+    if (!data.nombre || !data.apellido) {
+        showNotification('Nombre y apellido son requeridos', 'error');
+        return;
+    }
+    
+    try {
+        const response = await fetch(`${API_BASE_URL}?action=update_profile`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(data)
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            showNotification('Perfil actualizado exitosamente', 'success');
+            closeModal('profileModal');
+            // Recargar datos del usuario en el dashboard
+            loadUserData();
+        } else {
+            showNotification('Error: ' + result.message, 'error');
+        }
+    } catch (error) {
+        console.error('Error guardando perfil:', error);
+        showNotification('Error guardando perfil', 'error');
+    }
+}
+
+/**
+ * Enviar verificación de email
+ */
+async function sendEmailVerification() {
+    try {
+        const response = await fetch(`${API_BASE_URL}?action=send_verification`, {
+            method: 'POST'
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            showNotification('Email de verificación enviado', 'success');
+        } else {
+            showNotification('Error: ' + result.message, 'error');
+        }
+    } catch (error) {
+        console.error('Error enviando verificación:', error);
+        showNotification('Error enviando verificación', 'error');
+    }
+}
+
+/**
+ * Ejecutar verificación de email (usado desde verify.html)
+ */
+async function runEmailVerification() {
+    const token = getQueryParam('token');
+    
+    if (!token) {
+        showAlert('Token de verificación no proporcionado', 'error');
+        return;
+    }
+    
+    try {
+        const response = await fetch(`${API_BASE_URL}?action=verify_email&token=${token}`);
+        const result = await response.json();
+        
+        if (result.success) {
+            showAlert('¡Email verificado exitosamente! Redirigiendo al login...', 'success');
+            setTimeout(() => {
+                window.location.href = 'login.html';
+            }, 2000);
+        } else {
+            showAlert('Error: ' + result.message, 'error');
+        }
+    } catch (error) {
+        console.error('Error verificando email:', error);
+        showAlert('Error verificando email', 'error');
+    }
+}
+
 // Exponer funciones globales
 window.togglePassword = togglePassword;
 window.hideAlert = hideAlert;
@@ -557,3 +726,5 @@ window.openProfileModal = openProfileModal;
 window.saveProfile = saveProfile;
 window.sendEmailVerification = sendEmailVerification;
 window.runEmailVerification = runEmailVerification;
+window.loadUserData = loadUserData;
+window.closeModal = closeModal;
