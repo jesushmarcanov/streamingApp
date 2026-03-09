@@ -32,6 +32,11 @@ document.addEventListener('DOMContentLoaded', async function() {
         }
     }
 
+    // Cargar datos del usuario en el dashboard
+    if (typeof window.loadUserData === 'function') {
+        await window.loadUserData();
+    }
+
     loadDashboard();
     loadClientes();
     loadProveedores();

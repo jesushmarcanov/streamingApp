@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Perfil de Usuario</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; }
+        .success { color: green; }
+        .error { color: red; }
+        button { padding: 10px 15px; margin: 5px; }
+    </style>
+</head>
+<body>
+    <h1>Test de Carga de Perfil de Usuario</h1>
+    
+    <div class="test-section">
+        <h3>Información del Usuario</h3>
+        <div id="userInfo">
+            <p><strong>Nombre:</strong> <span id="sidebarUserName">Cargando...</span></p>
+            <p><strong>Rol:</strong> <span id="sidebarUserRole">—</span></p>
+        </div>
+    </div>
+    
+    <div class="test-section">
+        <h3>Acciones</h3>
+        <button onclick="testLoadUserData()">Cargar Datos del Usuario</button>
+        <button onclick="testAuthCheck()">Verificar Autenticación</button>
+        <button onclick="testProfile()">Obtener Perfil Completo</button>
+    </div>
+    
+    <div class="test-section">
+        <h3>Resultados</h3>
+        <div id="results"></div>
+    </div>
+
+    <script>
+        const API_BASE_URL = 'api/auth.php';
+        
+        function log(message, type = 'info') {
+            const results = document.getElementById('results');
+            const div = document.createElement('div');
+            div.className = type;
+            div.innerHTML = `[${new Date().toLocaleTimeString()}] ${message}`;
+            results.appendChild(div);
+            console.log(message);
+        }
+        
+        async function testLoadUserData() {
+            try {
+                log('Probando loadUserData()...', 'info');
+                
+                const response = await fetch(`${API_BASE_URL}?action=profile`);
+                const data = await response.json();
+                
+                if (data.success && data.data) {
+                    // Actualizar sidebar con datos del usuario
+                    const userNameElement = document.getElementById('sidebarUserName');
+                    const userRoleElement = document.getElementById('sidebarUserRole');
+                    
+                    if (userNameElement) {
+                        const fullName = `${data.data.nombre} ${data.data.apellido}`.trim();
+                        userNameElement.textContent = fullName || data.data.username;
+                    }
+                    
+                    if (userRoleElement) {
+                        userRoleElement.textContent = data.data.rol || 'Usuario';
+                    }
+                    
+                    log('✓ Datos del usuario cargados correctamente', 'success');
+                    log(`Nombre: ${data.data.nombre} ${data.data.apellido}`, 'info');
+                    log(`Rol: ${data.data.rol}`, 'info');
+                    log(`Email: ${data.data.email}`, 'info');
+                    log(`Email verificado: ${data.data.email_verified ? 'Sí' : 'No'}`, 'info');
+                } else {
+                    log('✗ Error cargando datos del usuario: ' + (data.message || 'Error desconocido'), 'error');
+                }
+            } catch (error) {
+                log('✗ Error en la petición: ' + error.message, 'error');
+            }
+        }
+        
+        async function testAuthCheck() {
+            try {
+                log('Probando checkAuth()...', 'info');
+                
+                const response = await fetch(`${API_BASE_URL}?action=check`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    log('✓ Usuario autenticado correctamente', 'success');
+                    log(`ID: ${data.data.id}`, 'info');
+                    log(`Username: ${data.data.username}`, 'info');
+                } else {
+                    log('✗ Usuario no autenticado: ' + data.message, 'error');
+                }
+            } catch (error) {
+                log('✗ Error en la petición: ' + error.message, 'error');
+            }
+        }
+        
+        async function testProfile() {
+            try {
+                log('Probando getProfile()...', 'info');
+                
+                const response = await fetch(`${API_BASE_URL}?action=profile`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    log('✓ Perfil obtenido correctamente', 'success');
+                    log(JSON.stringify(data.data, null, 2), 'info');
+                } else {
+                    log('✗ Error obteniendo perfil: ' + data.message, 'error');
+                }
+            } catch (error) {
+                log('✗ Error en la petición: ' + error.message, 'error');
+            }
+        }
+        
+        // Auto-test al cargar la página
+        window.addEventListener('load', function() {
+            log('Página cargada. Iniciando pruebas automáticas...', 'info');
+            setTimeout(testAuthCheck, 500);
+            setTimeout(testLoadUserData, 1000);
+        });
+    </script>
+</body>
+</html>
